@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Per-User-Input Data Capture · Design Proposal</title>
+<style>
+  :root {
+    --navy: #0E2841;
+    --navy-light: #1C4C7A;
+    --navy-pale: #E8EEF5;
+    --amber: #B8791B;
+    --amber-light: #F5E3C6;
+    --amber-pale: #FDF6E8;
+    --green: #3B6D11;
+    --green-light: #D7E8C5;
+    --purple: #534AB7;
+    --purple-light: #DDD9F2;
+    --grey-1: #F8F8F8;
+    --grey-2: #E5E5E5;
+    --grey-3: #999;
+    --grey-4: #5A5A5A;
+    --white: #FFFFFF;
+    --yellow: #FFF3B0;
+    --red: #A94442;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Calibri', 'Segoe UI', -apple-system, sans-serif;
+    color: var(--navy);
+    line-height: 1.6;
+    background: var(--white);
+  }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 40px 32px 80px; }
+
+  header {
+    background: var(--navy);
+    color: var(--white);
+    padding: 48px 32px;
+  }
+  header .inner { max-width: 1200px; margin: 0 auto; }
+  header .kicker { font-size: 12px; opacity: 0.6; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 16px; }
+  header h1 { font-size: 36px; font-weight: 700; margin-bottom: 12px; letter-spacing: -0.5px; line-height: 1.2; }
+  header .sub { font-size: 17px; opacity: 0.8; font-style: italic; max-width: 800px; }
+
+  nav {
+    background: var(--grey-1);
+    padding: 14px 32px;
+    border-bottom: 1px solid var(--grey-2);
+    font-size: 13px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  nav .inner { max-width: 1200px; margin: 0 auto; display: flex; gap: 20px; flex-wrap: wrap; }
+  nav a { color: var(--grey-4); text-decoration: none; padding: 4px 0; border-bottom: 2px solid transparent; transition: all 0.15s; }
+  nav a:hover { color: var(--navy); border-bottom-color: var(--amber); }
+
+  section { margin-bottom: 72px; }
+  section > h2 {
+    font-size: 30px;
+    color: var(--navy);
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 3px solid var(--amber);
+    display: inline-block;
+    letter-spacing: -0.3px;
+  }
+  h3 { font-size: 20px; color: var(--navy); margin: 28px 0 14px; font-weight: 700; }
+  h4 { font-size: 13px; color: var(--amber); margin: 20px 0 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; }
+  p { margin-bottom: 14px; font-size: 15px; }
+  ul { padding-left: 22px; margin-bottom: 14px; }
+  li { margin-bottom: 6px; font-size: 15px; }
+  code { font-family: 'Consolas', 'Courier New', monospace; background: var(--grey-1); padding: 2px 6px; border-radius: 3px; font-size: 13px; color: var(--navy); }
+
+  .lead { font-size: 17px; color: var(--navy); line-height: 1.6; margin-bottom: 20px; }
+
+  .qda {
+    background: var(--navy-pale);
+    padding: 18px 24px;
+    border-radius: 4px;
+    margin: 16px 0;
+    border-left: 4px solid var(--navy);
+  }
+  .qda .q { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: var(--navy-light); font-weight: 700; margin-bottom: 6px; }
+  .qda .a { font-size: 16px; color: var(--navy); line-height: 1.55; }
+
+  .callout {
+    background: var(--amber-pale);
+    border-left: 4px solid var(--amber);
+    padding: 18px 22px;
+    margin: 20px 0;
+    font-size: 15px;
+    border-radius: 0 4px 4px 0;
+  }
+  .callout strong { color: var(--navy); font-weight: 700; }
+  .callout.red { background: #FBEDE9; border-left-color: var(--red); }
+
+  .yellow { background: var(--yellow); padding: 1px 4px; border-radius: 2px; }
+
+  .state-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 20px 0; }
+  .state-card {
+    background: var(--white);
+    border: 1px solid var(--grey-2);
+    border-radius: 4px;
+    padding: 16px;
+  }
+  .state-card h5 { font-family: 'Consolas', monospace; font-size: 15px; color: var(--navy); margin-bottom: 4px; font-weight: 700; }
+  .state-card .rows { font-size: 12px; color: var(--grey-4); margin-bottom: 10px; }
+  .state-card p { font-size: 13px; margin-bottom: 0; line-height: 1.5; color: var(--navy); }
+  .state-card .status-pill {
+    display: inline-block;
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  .state-card .status-pill.ok { background: var(--green-light); color: var(--green); }
+  .state-card .status-pill.broken { background: #FBEDE9; color: var(--red); }
+  .state-card .status-pill.empty { background: var(--grey-2); color: var(--grey-4); }
+  .state-card .status-pill.reuse { background: var(--amber-light); color: var(--amber); }
+
+  .pieces { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin: 20px 0; }
+  .piece {
+    background: var(--white);
+    border: 1px solid var(--grey-2);
+    padding: 20px;
+    border-radius: 4px;
+    border-top: 4px solid var(--grey-3);
+  }
+  .piece.text { border-top-color: var(--purple); }
+  .piece.meta { border-top-color: var(--purple); }
+  .piece.page { border-top-color: var(--amber); }
+  .piece.score { border-top-color: var(--navy); }
+  .piece h5 { font-size: 16px; color: var(--navy); margin-bottom: 4px; font-weight: 700; }
+  .piece .status { font-size: 12px; color: var(--grey-4); margin-bottom: 10px; }
+  .piece .status .live { color: var(--green); font-weight: 700; }
+  .piece .status .broken { color: var(--red); font-weight: 700; }
+  .piece .status .missing { color: var(--amber); font-weight: 700; }
+  .piece .desc { font-size: 14px; color: var(--navy); margin-bottom: 8px; }
+  .piece .owner { font-size: 12px; color: var(--grey-4); font-style: italic; }
+  .piece .owner strong { color: var(--navy); font-style: normal; }
+
+  .resp {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 0;
+    margin: 20px 0;
+    border: 1px solid var(--grey-2);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .resp-band { padding: 20px; color: var(--white); }
+  .resp-band h5 { font-size: 15px; margin-bottom: 4px; font-weight: 700; }
+  .resp-band .who { font-size: 12px; opacity: 0.85; }
+  .resp-body { padding: 20px; background: var(--white); }
+  .resp-body h6 { font-size: 14px; color: var(--navy); margin-bottom: 8px; font-weight: 700; }
+  .resp-body ul { margin-top: 8px; }
+  .resp-body li { font-size: 13px; margin-bottom: 4px; }
+  .band-lexi { background: var(--purple); }
+  .band-frontend { background: var(--amber); }
+  .band-scoring { background: var(--navy); }
+  .band-lexi + .resp-body { border-left: 4px solid var(--purple); }
+  .band-frontend + .resp-body { border-left: 4px solid var(--amber); }
+  .band-scoring + .resp-body { border-left: 4px solid var(--navy); }
+
+  .fields { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 20px 0; }
+  .field {
+    background: var(--white);
+    border: 1px solid var(--grey-2);
+    border-left: 4px solid var(--navy);
+    padding: 14px 16px;
+    border-radius: 3px;
+  }
+  .field .fname { font-family: 'Consolas', monospace; font-weight: 700; color: var(--navy); font-size: 14px; margin-bottom: 2px; }
+  .field .ftype { font-family: 'Consolas', monospace; font-size: 11px; color: var(--grey-4); margin-bottom: 8px; }
+  .field .fwhy { font-size: 13px; color: var(--navy); line-height: 1.5; }
+  .field .fnull { display: inline-block; font-size: 9px; padding: 1px 6px; border-radius: 2px; background: var(--grey-2); color: var(--grey-4); margin-left: 6px; vertical-align: middle; letter-spacing: 0.5px; }
+  .field .fnull.yes { background: var(--yellow); color: var(--navy); }
+
+  .alt {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 16px;
+    padding: 14px 18px;
+    background: var(--grey-1);
+    border-radius: 3px;
+    margin-bottom: 10px;
+    font-size: 14px;
+    border-left: 3px solid var(--grey-3);
+  }
+  .alt .alt-name { font-weight: 700; color: var(--navy); }
+  .alt .alt-name code { background: var(--white); }
+  .alt .alt-why { color: var(--grey-4); }
+
+  .legend { display: flex; gap: 24px; justify-content: center; margin: 16px 0 20px; font-size: 12px; color: var(--grey-4); flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 8px; }
+  .legend-swatch { width: 16px; height: 16px; border-radius: 3px; border: 1px solid var(--grey-3); }
+
+  .diag-caption { font-size: 12px; color: var(--grey-4); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px; font-weight: 700; text-align: center; }
+
+  .seq {
+    background: var(--white);
+    border: 1px solid var(--grey-2);
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 20px 0;
+  }
+  .seq-row {
+    display: grid;
+    grid-template-columns: 60px 1fr 200px 140px;
+    align-items: center;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--grey-2);
+    font-size: 14px;
+  }
+  .seq-row:last-child { border-bottom: none; }
+  .seq-row.header { background: var(--navy); color: var(--white); font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; }
+  .seq-num { font-weight: 700; color: var(--amber); font-size: 18px; }
+  .seq-what { color: var(--navy); }
+  .seq-owner { font-size: 13px; color: var(--grey-4); }
+  .seq-blocking { font-size: 12px; text-align: center; padding: 4px 8px; border-radius: 3px; }
+  .seq-blocking.yes { background: #FBEDE9; color: var(--red); font-weight: 700; }
+  .seq-blocking.no { background: var(--green-light); color: var(--green); font-weight: 700; }
+
+  .fau { margin: 16px 0; border: 1px solid var(--grey-2); border-radius: 4px; overflow: hidden; }
+  .fau-row { display: grid; grid-template-columns: 130px 1fr; gap: 16px; padding: 12px 16px; border-bottom: 1px solid var(--grey-2); font-size: 14px; }
+  .fau-row:last-child { border-bottom: none; }
+  .fau-tag { font-weight: 700; font-size: 10px; letter-spacing: 2px; padding-top: 3px; }
+  .fau-tag.fact { color: var(--green); }
+  .fau-tag.assumption { color: var(--amber); }
+  .fau-tag.unknown { color: var(--grey-4); }
+
+  footer { color: var(--grey-4); font-size: 12px; text-align: center; padding: 40px; border-top: 1px solid var(--grey-2); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="inner">
+    <div class="kicker">Design Proposal </div>
+    <h1>Per-user-input data capture for adaptive scoring</h1>
+    <div class="sub">How the app captures each user input, computes an adaptive score, and feeds the UI recommendation layer -- end to end.</div>
+  </div>
+</header>
+
+<nav>
+  <div class="inner">
+    <a href="#context">1 · Context</a>
+    <a href="#why">2 · Why capture matters</a>
+    <a href="#what">3 · What needs to be captured</a>
+    <a href="#how">4 · How each piece works</a>
+    <a href="#flow">5 · End-to-end flow</a>
+    <a href="#resp">6 · Who owns what</a>
+    <a href="#not">7 · Alternatives rejected</a>
+    <a href="#seq">8 · Sequencing</a>
+    <a href="#fau">9 · Fact · Assumption · Unknown</a>
+  </div>
+</nav>
+
+<div class="wrap">
+
+  <!-- 1 CONTEXT -->
+  <section id="context">
+    <h2>1 · Context</h2>
+
+    <p class="lead">The app adapts its UI based on how a user interacts with it. Adaptation is driven by a score -- <strong>UAES</strong> -- that reflects the quality of a user's engagement in real time.</p>
+
+    <p>To compute UAES, a reliable stream of user input signals is needed. Three input types are in scope: <strong>Lexi chat</strong>, <strong>touch</strong>, and later <strong>eye tracking</strong>. Each input must be captured, tagged with context, scored, and made available to the UI recommendation layer.</p>
+
+    <h3>Current state of capture in production</h3>
+
+    <div class="legend">
+      <div class="legend-item"><div class="legend-swatch" style="background: var(--green-light);"></div>working</div>
+      <div class="legend-item"><div class="legend-swatch" style="background: #FBEDE9;"></div>disabled or broken</div>
+      <div class="legend-item"><div class="legend-swatch" style="background: var(--grey-2);"></div>defined but unused</div>
+      <div class="legend-item"><div class="legend-swatch" style="background: var(--amber-light);"></div>reference pattern</div>
+    </div>
+
+    <div class="state-grid">
+      <div class="state-card">
+        <div class="status-pill broken">not capturing</div>
+        <h5>messages</h5>
+        <div class="rows">1,945 rows (pre-July 31)</div>
+        <p>Text capture was disabled on July 31 alongside the deprecated embedding code. No new Lexi text has landed since. Existing rows are mostly button state -- approximately 5% is real free text.</p>
+      </div>
+      <div class="state-card">
+        <div class="status-pill empty">field unused</div>
+        <h5>conversations</h5>
+        <div class="rows">1,043 rows</div>
+        <p>One row per Lexi conversation. The <code>context</code> jsonb field is defined but empty on every single row.</p>
+      </div>
+      <div class="state-card">
+        <div class="status-pill reuse">reference shape</div>
+        <h5>intervention_events</h5>
+        <div class="rows">77 rows</div>
+        <p>All trigger_type=inactivity. <code>trigger_context</code> jsonb holds <code>{pageName, pagePath, durationMs}</code>. This is the shape pattern reused for page context throughout the design.</p>
+      </div>
+      <div class="state-card">
+        <div class="status-pill ok">working</div>
+        <h5>user_actions</h5>
+        <div class="rows">12,040 rows</div>
+        <p>Frontend event stream -- page views, sends, receives, inactivity. <code>page_path</code> populated. <code>component_id</code> and <code>action_sequence_embedding</code> exist but empty.</p>
+      </div>
+    </div>
+
+    <div class="callout red">
+      <strong>The essential finding.</strong> Between July 31 and today, per-user-input capture is partial at best. Text is not landing. Classification does not exist as a stored field. Flow state is not stored. UAES itself is computed in Python but never persisted. Without capture, no score is possible.
+    </div>
+
+    
+  </section>
+
+  <!-- 2 WHY -->
+  <section id="why">
+    <h2>2 · Why per-input capture matters</h2>
+
+    <p class="lead">Adaptation cannot happen without a per-input signal. Three layered questions explain the rationale.</p>
+
+    <div class="qda">
+      <div class="q">Question</div>
+      <div class="a">Why capture data per user input rather than per session?</div>
+    </div>
+    <div class="qda">
+      <div class="q">Definition</div>
+      <div class="a">Per-input capture means every discrete user action -- a chat message, a tap, a gaze event -- produces its own row of data.</div>
+    </div>
+    <div class="qda">
+      <div class="q">Answer</div>
+      <div class="a">Because the UI recommendation adjusts in real time. Session-level capture is a summary -- useful for reporting, useless for live adaptation. Per-input capture is the input signal to the scoring engine.</div>
+    </div>
+
+    <h3>What per-input capture enables</h3>
+    <ul>
+      <li><strong>Live UAES computation.</strong> The engine reads the input, tags it, scores it, returns a value the UI can act on.</li>
+      <li><strong>Full audit trail.</strong> Every score is traceable back to the exact input that produced it.</li>
+      <li><strong>Cross-source consistency.</strong> The same scoring path applies to Lexi chat, touch, and eye tracking -- one engine, one output shape.</li>
+      <li><strong>Recommender simplicity.</strong> The recommender queries one table for the current UAES and running SAES, no unions, no joins across signal sources.</li>
+    </ul>
+  </section>
+
+  <!-- 3 WHAT -->
+  <section id="what">
+    <h2>3 · What needs to be captured</h2>
+
+    <p class="lead">Every user input needs four pieces of information. Each has a different status today and a different owner.</p>
+
+    <div class="pieces">
+      <div class="piece text">
+        <h5>Raw input</h5>
+        <div class="status"><span class="broken">Not landing</span> · since July 31</div>
+        <p class="desc">The user's actual input -- text for Lexi, action name for touch, gaze coordinates for eye tracking.</p>
+        <p class="owner">Owner: <strong>Lexi capture pipeline</strong> (for text). Frontend event pipeline (for touch, eye).</p>
+      </div>
+      <div class="piece meta">
+        <h5>Kind and state (level 2 and level 3)</h5>
+        <div class="status"><span class="missing">Not stored anywhere</span></div>
+        <p class="desc">Kind (level 2) -- which of the five kinds the user's input is: Condition, Need, Adjustment, Ambiguous, or Unrelated. State (level 3) -- how sure Lexi is at each round: Known, Somewhat known, Unsure, or Unknown.</p>
+        <p class="owner">Owner: <strong>Lexi classification and flow engine</strong>. Needs to expose these as stored fields when capture is rebuilt.</p>
+      </div>
+      <div class="piece page">
+        <h5>Page context</h5>
+        <div class="status"><span class="live">Available via frontend</span></div>
+        <p class="desc">What page the user was on when the input happened -- <code>pageName</code> and <code>pagePath</code>. Same shape <code>intervention_events</code> already uses.</p>
+        <p class="owner">Owner: <strong>Frontend</strong>. Small addition to the write payload.</p>
+      </div>
+      <div class="piece score">
+        <h5>UAES score</h5>
+        <div class="status"><span class="missing">Computed but not persisted</span></div>
+        <p class="desc">The score itself, 0 to 5, plus the running maximum (SAES) for audit trail.</p>
+        <p class="owner">Owner: <strong>Scoring engine</strong>. Needs a table to write into.</p>
+      </div>
+    </div>
+
+    <div class="callout">
+      <strong>The pattern this reveals.</strong> Only one of the four pieces requires a new table on the scoring side. Two of the four (raw input, classification and flow state) depend on the Lexi capture pipeline being restarted with additional fields. One (page context) is a small frontend addition. This is not one design problem -- it is three parallel workstreams that meet at the scoring table.
+    </div>
+  </section>
+
+  <!-- 4 HOW -->
+  <section id="how">
+    <h2>4 · How each piece works</h2>
+
+    <p class="lead">The design splits by system boundary. Each system owns its piece; the pieces meet at the scoring table.</p>
+
+    <div class="resp">
+      <div class="resp-band band-lexi">
+        <h5>Lexi capture</h5>
+        <div class="who">Owner: Lexi backend</div>
+      </div>
+      <div class="resp-body">
+        <h6>Restart raw text capture, add kind, state and round tracking as stored fields</h6>
+        <p>When the Lexi backend receives a user message, it needs to save five things back to <code>messages</code>: the raw content (as before July 31), the kind (level 2 -- one of Condition, Need, Adjustment, Ambiguous, Unrelated), the state at each round (level 3 -- Known, Somewhat known, Unsure, Unknown), the round number, and the resolution (resolved or handed over).</p>
+        <ul>
+          <li>Raw content -- as previously stored, decoupled from the deprecated embedding.</li>
+          <li>Kind -- new field on the message row, populated by the classifier at write time. One of the five level 2 kinds.</li>
+          <li>State -- new field on the message row, populated by the flow engine at each round. One of the four level 3 states.</li>
+          <li>Round number -- 1, 2, or 3. Some inputs resolve in round 1 (Known state); some need up to three (Unsure state).</li>
+          <li>Resolution -- 'resolved' if Lexi could act, 'handed over' if unresolved after all rounds.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="resp">
+      <div class="resp-band band-frontend">
+        <h5>Frontend</h5>
+        <div class="who">Owner: Mobile app</div>
+      </div>
+      <div class="resp-body">
+        <h6>Send page context with each input payload</h6>
+        <p>When a user sends an input from the app, the write payload includes the current page name and path. Same pattern <code>intervention_events.trigger_context</code> already uses.</p>
+        <ul>
+          <li><code>{pageName: "the settings page", pagePath: "/settings"}</code> attached to every input write.</li>
+          <li>Removes the need to reconstruct page context by joining across tables -- which is currently not possible because <code>conversations.session_id</code> and <code>user_actions.session_id</code> are two different namespaces.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="resp">
+      <div class="resp-band band-scoring">
+        <h5>Scoring engine</h5>
+        <div class="who">Owner: Backend Python + new table</div>
+      </div>
+      <div class="resp-body">
+        <h6>Compute UAES per input, write the score to a new table</h6>
+        <p>One new table in the <code>scoring</code> schema -- <code>scoring.input_events</code>. Every user input, from any source, produces exactly one row here after the scoring engine has computed UAES for it.</p>
+
+        <h4>The table, field by field</h4>
+
+        <div class="fields">
+          <div class="field">
+            <div class="fname">id <span class="fnull">NOT NULL</span></div>
+            <div class="ftype">uuid · primary key</div>
+            <div class="fwhy">One row per user input.</div>
+          </div>
+          <div class="field">
+            <div class="fname">user_id <span class="fnull">NOT NULL</span></div>
+            <div class="ftype">uuid</div>
+            <div class="fwhy">Who produced the input.</div>
+          </div>
+          <div class="field">
+            <div class="fname">session_id <span class="fnull">NOT NULL</span></div>
+            <div class="ftype">uuid</div>
+            <div class="fwhy">Session grouping. Same namespace as the source row.</div>
+          </div>
+          <div class="field">
+            <div class="fname">source_type <span class="fnull">NOT NULL</span></div>
+            <div class="ftype">text enum</div>
+            <div class="fwhy">One of <code>lexi</code>, <code>touch</code>, <code>eye</code>. The recommender uses this to filter by source when needed.</div>
+          </div>
+          <div class="field">
+            <div class="fname">source_ref_id <span class="fnull">NOT NULL</span></div>
+            <div class="ftype">uuid</div>
+            <div class="fwhy">Points to the row this score came from -- <code>messages.id</code> for Lexi, <code>user_actions.id</code> for touch. Full audit trail; enables optional join back to raw content, kind, state.</div>
+          </div>
+          <div class="field">
+            <div class="fname">entry_point <span class="fnull">NOT NULL</span></div>
+            <div class="ftype">text enum</div>
+            <div class="fwhy">Level 1 label. One of <code>E0</code>–<code>E7</code> (Generic, Describe, My challenges, Support required, Ask Lexi, Report a problem, Give feedback, Inactivity popup). Captured by frontend at session open.</div>
+          </div>
+          <div class="field">
+            <div class="fname">page_context <span class="fnull">NOT NULL</span></div>
+            <div class="ftype">jsonb</div>
+            <div class="fwhy"><code>{pageName, pagePath}</code> at time of input. Same shape as <code>intervention_events.trigger_context</code>.</div>
+          </div>
+          <div class="field">
+            <div class="fname">uaes_score <span class="fnull">NOT NULL</span></div>
+            <div class="ftype">smallint (0–5)</div>
+            <div class="fwhy">The live score at this input, computed by the scoring engine from kind, state, and resolution.</div>
+          </div>
+          <div class="field">
+            <div class="fname">saes_running <span class="fnull">NOT NULL</span></div>
+            <div class="ftype">smallint (0–5)</div>
+            <div class="fwhy">Running maximum of UAES in the session so far. SAES at any point is reconstructable.</div>
+          </div>
+          <div class="field">
+            <div class="fname">created_at <span class="fnull">NOT NULL</span></div>
+            <div class="ftype">timestamptz</div>
+            <div class="fwhy">Timestamp for ordering events within a session.</div>
+          </div>
+        </div>
+
+        <p style="margin-top: 16px;"><strong>Design principle for the scoring side.</strong> Raw text, classification, and flow state stay where the Lexi system produces them. The scoring table stores only what it computes plus the reference back to the source row. Denormalisation is minimal -- just the audit fields (session, source_type, page context, timestamps) needed for the recommender to work without a join.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 END-TO-END FLOW -->
+  <section id="flow">
+    <h2>5 · End-to-end flow</h2>
+
+    <p class="lead">How the three systems work together for a single Lexi text input.</p>
+
+    <div class="diag-caption">Data flow across systems</div>
+
+    <svg viewBox="0 0 1160 380" style="width: 100%; height: auto; margin: 16px 0 32px;">
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#B8791B"/>
+        </marker>
+        <marker id="arrow2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#0E2841"/>
+        </marker>
+      </defs>
+
+      <text x="130" y="20" font-family="Calibri" font-size="11" fill="#5A5A5A" font-weight="700" letter-spacing="2" text-anchor="middle">FRONTEND</text>
+      <text x="450" y="20" font-family="Calibri" font-size="11" fill="#534AB7" font-weight="700" letter-spacing="2" text-anchor="middle">LEXI CAPTURE</text>
+      <text x="800" y="20" font-family="Calibri" font-size="11" fill="#0E2841" font-weight="700" letter-spacing="2" text-anchor="middle">SCORING</text>
+      <text x="1070" y="20" font-family="Calibri" font-size="11" fill="#3B6D11" font-weight="700" letter-spacing="2" text-anchor="middle">UI</text>
+
+      <line x1="260" y1="30" x2="260" y2="360" stroke="#E5E5E5" stroke-dasharray="4,3"/>
+      <line x1="640" y1="30" x2="640" y2="360" stroke="#E5E5E5" stroke-dasharray="4,3"/>
+      <line x1="960" y1="30" x2="960" y2="360" stroke="#E5E5E5" stroke-dasharray="4,3"/>
+
+      <rect x="30" y="50" width="220" height="60" fill="#0E2841" rx="4"/>
+      <text x="140" y="75" text-anchor="middle" font-family="Calibri" font-size="14" fill="#FFFFFF" font-weight="700">1 · User types message</text>
+      <text x="140" y="95" text-anchor="middle" font-family="Calibri" font-size="12" fill="#CADCFC" font-style="italic">on Lexi screen</text>
+
+      <path d="M 250 80 L 280 80 L 280 160 L 300 160" fill="none" stroke="#0E2841" stroke-width="1.5" marker-end="url(#arrow2)"/>
+
+      <rect x="30" y="140" width="220" height="80" fill="#F5E3C6" stroke="#B8791B" stroke-width="1.5" rx="4"/>
+      <text x="140" y="165" text-anchor="middle" font-family="Calibri" font-size="13" fill="#0E2841" font-weight="700">2 · Frontend sends payload</text>
+      <text x="140" y="185" text-anchor="middle" font-family="Consolas" font-size="10" fill="#5A5A5A">{ text, session_id,</text>
+      <text x="140" y="200" text-anchor="middle" font-family="Consolas" font-size="10" fill="#5A5A5A">pageName, pagePath }</text>
+      <text x="140" y="215" text-anchor="middle" font-family="Calibri" font-size="10" fill="#B8791B" font-style="italic" font-weight="700">page context added</text>
+
+      <rect x="300" y="140" width="220" height="80" fill="#DDD9F2" stroke="#534AB7" stroke-width="1.5" rx="4"/>
+      <text x="410" y="165" text-anchor="middle" font-family="Calibri" font-size="13" fill="#0E2841" font-weight="700">3 · Lexi classifies input</text>
+      <text x="410" y="185" text-anchor="middle" font-family="Calibri" font-size="11" fill="#534AB7">assigns classification</text>
+      <text x="410" y="200" text-anchor="middle" font-family="Calibri" font-size="11" fill="#534AB7">tags flow state</text>
+      <text x="410" y="215" text-anchor="middle" font-family="Calibri" font-size="10" fill="#534AB7" font-style="italic" font-weight="700">new fields on write</text>
+
+      <path d="M 520 180 L 570 180" fill="none" stroke="#B8791B" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+      <rect x="570" y="140" width="180" height="80" fill="#E5E5E5" stroke="#999" stroke-width="1" rx="4"/>
+      <text x="660" y="165" text-anchor="middle" font-family="Calibri" font-size="13" fill="#0E2841" font-weight="700">4 · Save to messages</text>
+      <text x="660" y="185" text-anchor="middle" font-family="Consolas" font-size="11" fill="#5A5A5A">public.messages</text>
+      <text x="660" y="205" text-anchor="middle" font-family="Calibri" font-size="10" fill="#5A5A5A" font-style="italic">with all metadata</text>
+
+      <path d="M 750 180 L 800 180" fill="none" stroke="#B8791B" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+      <rect x="800" y="140" width="180" height="80" fill="#0E2841" rx="4"/>
+      <text x="890" y="165" text-anchor="middle" font-family="Calibri" font-size="13" fill="#FFFFFF" font-weight="700">5 · Score input</text>
+      <text x="890" y="185" text-anchor="middle" font-family="Calibri" font-size="11" fill="#CADCFC">Compute UAES</text>
+      <text x="890" y="200" text-anchor="middle" font-family="Calibri" font-size="11" fill="#CADCFC">Update SAES running max</text>
+
+      <path d="M 890 220 L 890 260" fill="none" stroke="#B8791B" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+      <rect x="770" y="260" width="240" height="80" fill="#F5E3C6" stroke="#B8791B" stroke-width="2" rx="4"/>
+      <text x="890" y="285" text-anchor="middle" font-family="Consolas" font-size="14" fill="#0E2841" font-weight="700">6 · scoring.input_events</text>
+      <text x="890" y="305" text-anchor="middle" font-family="Calibri" font-size="11" fill="#0E2841">one row written</text>
+      <text x="890" y="322" text-anchor="middle" font-family="Calibri" font-size="10" fill="#5A5A5A" font-style="italic">source_ref_id points to messages.id</text>
+
+      <path d="M 1010 300 L 1050 300" fill="none" stroke="#B8791B" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+      <rect x="1000" y="140" width="140" height="200" fill="#FFFFFF" stroke="#3B6D11" stroke-width="1.5" rx="4"/>
+      <text x="1070" y="200" text-anchor="middle" font-family="Calibri" font-size="13" fill="#0E2841" font-weight="700">7 · Recommender</text>
+      <text x="1070" y="220" text-anchor="middle" font-family="Calibri" font-size="11" fill="#3B6D11">reads UAES/SAES</text>
+      <text x="1070" y="238" text-anchor="middle" font-family="Calibri" font-size="11" fill="#3B6D11">picks UI change</text>
+      <text x="1070" y="270" text-anchor="middle" font-family="Calibri" font-size="10" fill="#5A5A5A" font-style="italic">no joins</text>
+      <text x="1070" y="285" text-anchor="middle" font-family="Calibri" font-size="10" fill="#5A5A5A" font-style="italic">just one table</text>
+    </svg>
+
+    <div class="callout">
+      <strong>Design rule.</strong> Every user input, regardless of source, passes through the scoring engine and produces exactly one row in <code>scoring.input_events</code>. The recommender reads only from this table. Sources feed in; scoring writes out; recommender consumes.
+    </div>
+
+    <p><strong>Touch and eye tracking flow the same way</strong> -- the source system captures the input, the scoring engine computes UAES for it, one row lands in <code>scoring.input_events</code> with <code>source_type = 'touch'</code> or <code>'eye'</code>.</p>
+  </section>
+
+  <!-- 6 WHO OWNS WHAT -->
+  <section id="resp">
+    <h2>6 · Who owns what</h2>
+
+    <p class="lead">Three systems, three ownership boundaries. Each has one clear job.</p>
+
+    <div class="diag-caption">Responsibility across systems</div>
+
+    <svg viewBox="0 0 1160 240" style="width: 100%; height: auto; margin: 16px 0 32px;">
+      <rect x="20" y="30" width="360" height="180" fill="#DDD9F2" stroke="#534AB7" stroke-width="2" rx="6"/>
+      <text x="200" y="60" text-anchor="middle" font-family="Calibri" font-size="16" fill="#0E2841" font-weight="700">Lexi capture</text>
+      <text x="200" y="82" text-anchor="middle" font-family="Calibri" font-size="12" fill="#534AB7" font-style="italic">Lexi backend team</text>
+      <line x1="60" y1="100" x2="340" y2="100" stroke="#534AB7" stroke-width="0.5"/>
+      <text x="200" y="120" text-anchor="middle" font-family="Calibri" font-size="12" fill="#0E2841">Restart text capture</text>
+      <text x="200" y="140" text-anchor="middle" font-family="Calibri" font-size="12" fill="#0E2841">Add classification field</text>
+      <text x="200" y="160" text-anchor="middle" font-family="Calibri" font-size="12" fill="#0E2841">Add flow state field</text>
+      <text x="200" y="185" text-anchor="middle" font-family="Consolas" font-size="11" fill="#5A5A5A">writes to → public.messages</text>
+
+      <rect x="400" y="30" width="360" height="180" fill="#F5E3C6" stroke="#B8791B" stroke-width="2" rx="6"/>
+      <text x="580" y="60" text-anchor="middle" font-family="Calibri" font-size="16" fill="#0E2841" font-weight="700">Frontend</text>
+      <text x="580" y="82" text-anchor="middle" font-family="Calibri" font-size="12" fill="#B8791B" font-style="italic">Mobile app team</text>
+      <line x1="440" y1="100" x2="720" y2="100" stroke="#B8791B" stroke-width="0.5"/>
+      <text x="580" y="120" text-anchor="middle" font-family="Calibri" font-size="12" fill="#0E2841">Send page context</text>
+      <text x="580" y="140" text-anchor="middle" font-family="Calibri" font-size="12" fill="#0E2841">with every input payload</text>
+      <text x="580" y="160" text-anchor="middle" font-family="Consolas" font-size="11" fill="#5A5A5A">{pageName, pagePath}</text>
+      <text x="580" y="185" text-anchor="middle" font-family="Calibri" font-size="11" fill="#5A5A5A" font-style="italic">same pattern as intervention_events</text>
+
+      <rect x="780" y="30" width="360" height="180" fill="#0E2841" rx="6"/>
+      <text x="960" y="60" text-anchor="middle" font-family="Calibri" font-size="16" fill="#FFFFFF" font-weight="700">Scoring</text>
+      <text x="960" y="82" text-anchor="middle" font-family="Calibri" font-size="12" fill="#CADCFC" font-style="italic">Backend Python + new table</text>
+      <line x1="820" y1="100" x2="1100" y2="100" stroke="#CADCFC" stroke-width="0.5"/>
+      <text x="960" y="120" text-anchor="middle" font-family="Calibri" font-size="12" fill="#FFFFFF">Compute UAES per input</text>
+      <text x="960" y="140" text-anchor="middle" font-family="Calibri" font-size="12" fill="#FFFFFF">Maintain running SAES</text>
+      <text x="960" y="160" text-anchor="middle" font-family="Calibri" font-size="12" fill="#FFFFFF">Write one row per input</text>
+      <text x="960" y="185" text-anchor="middle" font-family="Consolas" font-size="11" fill="#CADCFC">to scoring.input_events</text>
+    </svg>
+
+    <p><strong>The three do not depend on each other for delivery -- they can proceed in parallel.</strong> When all three land, the recommender has everything it needs from one table read.</p>
+  </section>
+
+  <!-- 7 ALTERNATIVES -->
+  <section id="not">
+    <h2>7 · Alternatives considered and rejected</h2>
+
+    <p class="lead">Six approaches were considered before landing on the design above. Each is rejected for a specific reason.</p>
+
+    <div class="alt">
+      <div class="alt-name">Extend <code>messages</code> with UAES columns</div>
+      <div class="alt-why">1,945 rows today, ~95% are button clicks with no scoring metadata. Adding classification / uaes columns means ~95% of rows have all-null values. Sparse and wasteful.</div>
+    </div>
+    <div class="alt">
+      <div class="alt-name">Stuff scoring into <code>messages.metadata</code> jsonb</div>
+      <div class="alt-why">No type safety on scoring fields. No clean indexes on classification or UAES. The metadata column becomes a dumping ground; queries slow and become error-prone over time.</div>
+    </div>
+    <div class="alt">
+      <div class="alt-name">Extend <code>conversations.context</code></div>
+      <div class="alt-why">Session-level, not input-level -- wrong granularity for per-input scoring. Also empty on every current row, meaning no owner has defined what it is for.</div>
+    </div>
+    <div class="alt">
+      <div class="alt-name">Store scoring in <code>user_actions.metadata</code></div>
+      <div class="alt-why">user_actions is a frontend event stream. Scoring is a computed output. Mixing them muddies the system boundary between raw signal capture and computed IP.</div>
+    </div>
+    <div class="alt">
+      <div class="alt-name">Adopt ClickHouse for scoring storage</div>
+      <div class="alt-why">ClickHouse pays off around tens of millions of rows per year. Current volume -- 12,040 user_actions in one month -- sits comfortably in Postgres. Deferred. Revisit threshold: <span class="yellow">50 million rows per year</span>.</div>
+    </div>
+    <div class="alt">
+      <div class="alt-name">Store any single field as free text without an enum</div>
+      <div class="alt-why">Kind, state, entry point all have a fixed vocabulary now (level 1: E0–E7, level 2: five kinds, level 3: four states). Storing them as free text loses the type safety and makes filtering error-prone. Enum types keep the data clean and match the language established in the level 1/2/3 diagram.</div>
+    </div>
+  </section>
+
+  <!-- 8 SEQUENCING -->
+  <section id="seq">
+    <h2>8 · Sequencing</h2>
+
+    <p class="lead">The three workstreams can proceed in parallel. Some blocks are technically prerequisites -- the scoring table cannot fill with real Lexi data until capture and page context are working. But the scoring table itself can be created and tested independently.</p>
+
+    <div class="seq">
+      <div class="seq-row header">
+        <div>Step</div>
+        <div>Work</div>
+        <div>System</div>
+        <div>Blocks scoring?</div>
+      </div>
+      <div class="seq-row">
+        <div class="seq-num">1</div>
+        <div class="seq-what">Restart raw text capture with classification and flow state as stored fields</div>
+        <div class="seq-owner">Lexi capture</div>
+        <div class="seq-blocking yes">Yes</div>
+      </div>
+      <div class="seq-row">
+        <div class="seq-num">2</div>
+        <div class="seq-what">Add page context (<code>pageName</code>, <code>pagePath</code>) to every input write payload</div>
+        <div class="seq-owner">Frontend</div>
+        <div class="seq-blocking no">No -- small</div>
+      </div>
+      <div class="seq-row">
+        <div class="seq-num">3</div>
+        <div class="seq-what">Create <code>scoring.input_events</code> table with the field list above</div>
+        <div class="seq-owner">Backend</div>
+        <div class="seq-blocking no">No -- start now</div>
+      </div>
+      <div class="seq-row">
+        <div class="seq-num">4</div>
+        <div class="seq-what">Wire scoring engine to write to <code>scoring.input_events</code> after each input</div>
+        <div class="seq-owner">Backend</div>
+        <div class="seq-blocking no">No -- parallel</div>
+      </div>
+      <div class="seq-row">
+        <div class="seq-num">5</div>
+        <div class="seq-what">Wire UI recommender to read from <code>scoring.input_events</code></div>
+        <div class="seq-owner">Backend</div>
+        <div class="seq-blocking no">No -- synthetic testable</div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <strong>Step 1 is the only true blocker.</strong> Without Lexi text capture restarted, real UAES scores cannot flow for Lexi input. Steps 2–5 can proceed independently and be tested end-to-end with synthetic input before Step 1 lands. Touch scoring (which does not depend on Step 1) can go live earlier if the touch scoring formula is defined.
+    </div>
+  </section>
+
+  <!-- 9 FAU -->
+  <section id="fau">
+    <h2>9 · Fact · Assumption · Unknown</h2>
+
+    <div class="fau">
+      <div class="fau-row"><div class="fau-tag fact">FACT</div><div>Lexi text capture was disabled on July 31 alongside the deprecated embedding code. No new Lexi text has landed in <code>messages</code> since.</div></div>
+      <div class="fau-row"><div class="fau-tag fact">FACT</div><div><code>messages</code> table has 1,945 rows, all role=user. Metadata only has timestamp. No classification or entry point captured today .</div></div>
+      <div class="fau-row"><div class="fau-tag fact">FACT</div><div><code>conversations.context</code> jsonb field is empty on all 1,043 rows.</div></div>
+      <div class="fau-row"><div class="fau-tag fact">FACT</div><div><code>user_actions</code> has 12,040 rows across one month. <code>page_path</code> populated. <code>component_id</code> and <code>action_sequence_embedding</code> columns exist but null on every row.</div></div>
+      <div class="fau-row"><div class="fau-tag fact">FACT</div><div><code>intervention_events.trigger_context</code> stores <code>{pageName, pagePath, durationMs}</code> -- the shape pattern reused here.</div></div>
+      <div class="fau-row"><div class="fau-tag fact">FACT</div><div><code>conversations.session_id</code> and <code>user_actions.session_id</code> share zero values. Different session namespaces.</div></div>
+      <div class="fau-row"><div class="fau-tag fact">FACT</div><div><code>messages</code> table has zero role=assistant rows. Lexi's replies are not stored.</div></div>
+      <div class="fau-row"><div class="fau-tag fact">FACT</div><div>The <code>scoring</code> schema was approved in July for IP separation between raw user data and computed scores.</div></div>
+      <div class="fau-row"><div class="fau-tag assumption">ASSUMPTION</div><div><span class="yellow">Lexi capture restart will include classification and flow state as stored fields</span>. If not, an alternative -- storing these separately on the scoring side -- is needed.</div></div>
+      <div class="fau-row"><div class="fau-tag assumption">ASSUMPTION</div><div><span class="yellow">Touch UAES formula will exist before touch scoring rows start flowing</span>. The schema supports touch inputs; the computation is separate design work.</div></div>
+      <div class="fau-row"><div class="fau-tag assumption">ASSUMPTION</div><div><span class="yellow">50 million rows per year is the threshold to revisit ClickHouse</span>. Rough number, tunable once real scoring volume is observed.</div></div>
+      <div class="fau-row"><div class="fau-tag unknown">UNKNOWN</div><div>Whether <code>scoring.lexi_session_scores</code> (approved in July) was physically created in staging, or approved only on paper.</div></div>
+      <div class="fau-row"><div class="fau-tag unknown">UNKNOWN</div><div>The exact shape of the Lexi classifier output -- one label, label plus confidence, multi-label. Affects the classification field design on the Lexi side.</div></div>
+      <div class="fau-row"><div class="fau-tag unknown">UNKNOWN</div><div>Whether flow state is currently tracked internally in the Lexi flow engine, or would need to be added.</div></div>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  Per-user-input data capture · design proposal ·
+</footer>
+
+</body>
+</html>

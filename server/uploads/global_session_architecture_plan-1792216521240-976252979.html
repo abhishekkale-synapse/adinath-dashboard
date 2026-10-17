@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Global Session Architecture Plan - BankAbility</title>
+<style>
+  :root {
+    --primary: #1e3a8a;
+    --primary-light: #3b82f6;
+    --success: #059669;
+    --warning: #d97706;
+    --danger: #dc2626;
+    --dark: #0f172a;
+    --gray-bg: #f8fafc;
+    --card-bg: #ffffff;
+    --border: #e2e8f0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--gray-bg);
+    color: #334155;
+    line-height: 1.6;
+    padding: 30px 20px;
+  }
+  .container {
+    max-width: 1000px;
+    margin: 0 auto;
+    background: var(--card-bg);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .header {
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+    color: white;
+    padding: 35px 40px;
+  }
+  .header h1 {
+    font-size: 24pt;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .header p {
+    color: #cbd5e1;
+    font-size: 11pt;
+  }
+  .content { padding: 40px; }
+  
+  h2 {
+    font-size: 15pt;
+    color: var(--dark);
+    margin: 30px 0 15px 0;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  h2:first-of-type { margin-top: 0; }
+  
+  .badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 9pt;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  .badge-danger { background: #fee2e2; color: var(--danger); }
+  .badge-success { background: #dcfce7; color: var(--success); }
+  .badge-primary { background: #e0e7ff; color: var(--primary); }
+  
+  /* Comparison Grid */
+  .comparison-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin: 20px 0;
+  }
+  .panel {
+    border-radius: 8px;
+    padding: 20px;
+    border: 1px solid var(--border);
+  }
+  .panel-current {
+    background-color: #fffaf0;
+    border-color: #fed7aa;
+  }
+  .panel-future {
+    background-color: #f0fdf4;
+    border-color: #bbf7d0;
+  }
+  .panel h3 {
+    font-size: 12pt;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  ul { padding-left: 20px; margin-bottom: 10px; }
+  li { margin-bottom: 6px; font-size: 10pt; }
+  
+  /* Flow Diagram Visual */
+  .diagram-container {
+    background: #0f172a;
+    border-radius: 8px;
+    padding: 25px;
+    color: #e2e8f0;
+    margin: 20px 0;
+  }
+  .diagram-title {
+    font-weight: 600;
+    font-size: 11pt;
+    color: #38bdf8;
+    margin-bottom: 15px;
+  }
+  .flow-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+    background: #1e293b;
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-family: Consolas, monospace;
+    font-size: 9.5pt;
+  }
+  .flow-box .node {
+    background: #334155;
+    padding: 6px 12px;
+    border-radius: 4px;
+    color: #f8fafc;
+  }
+  .flow-box .arrow { color: #94a3b8; font-weight: bold; }
+  
+  /* Checklist Table */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 15px 0 25px 0;
+  }
+  th, td {
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 10pt;
+    border-bottom: 1px solid var(--border);
+  }
+  th {
+    background: #f1f5f9;
+    color: var(--dark);
+    font-weight: 600;
+  }
+  
+  /* Resource Links */
+  .links-box {
+    background: #eff6ff;
+    border-left: 4px solid var(--primary-light);
+    padding: 20px;
+    border-radius: 4px;
+    margin-top: 25px;
+  }
+  .links-box a {
+    color: var(--primary);
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .links-box a:hover { text-decoration: underline; }
+  .link-item { margin-bottom: 12px; }
+  .link-desc { font-size: 9pt; color: #64748b; margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h1>Global Session Architecture Plan</h1>
+    <p>Telemetry Standardization: Unifying Eye Tracking, Touch, and Lexi under a Single Root Session</p>
+  </div>
+
+  <div class="content">
+
+    <!-- Executive Summary -->
+    <h2>Executive Summary</h2>
+    <p>Currently, BankAbility operates with <strong>three isolated session identifiers</strong>: Eye Tracking uses a database <code>UUID</code>, Touch generates per-screen text timestamps (<code>session-Date.now()</code>), and Lexi generates a separate <code>conversation_id</code>. This architecture plan establishes the <strong>Global App Session Pattern</strong> to unify all telemetry under a single standard UUID.</p>
+
+    <!-- Comparison -->
+    <h2>Architecture Comparison</h2>
+    <div class="comparison-grid">
+      
+      <!-- Current State -->
+      <div class="panel panel-current">
+        <h3>Current Fragmented State <span class="badge badge-danger">High Technical Debt</span></h3>
+        <ul>
+          <li><strong>Touch:</strong> Generates text strings <code>session-${Date.now()}</code> on every screen mount.</li>
+          <li><strong>Eye Tracking:</strong> Generates a strict database <code>UUID</code>.</li>
+          <li><strong>Lexi Chat:</strong> Generates an independent <code>conversation_id</code>.</li>
+          <li><strong>Database Impact:</strong> Schema format mismatch requires dedicated tables or duplicate columns.</li>
+          <li><strong>AI Impact:</strong> Cannot join simultaneous eye jitter, touch errors, and user chat choices together in real time.</li>
+        </ul>
+      </div>
+
+      <!-- Future State -->
+      <div class="panel panel-future">
+        <h3>Future Global State <span class="badge badge-success">Industry Standard</span></h3>
+        <ul>
+          <li><strong>Single Root Session:</strong> App generates one standard <code>UUIDv4</code> or <code>UUIDv7</code> at launch.</li>
+          <li><strong>Zero DB Migration:</strong> All Postgres tables (<code>user_actions</code>, <code>messages</code>, <code>touch_cognitive_scores</code>) natively support 36-char UUIDs.</li>
+          <li><strong>Lifecycle:</strong> 30-minute standard inactivity auto-rotation.</li>
+          <li><strong>Full Multimodal AI:</strong> Allows single-query correlation: <code>WHERE session_id = 'xyz'</code>.</li>
+        </ul>
+      </div>
+
+    </div>
+
+    <!-- Visual Flow Diagram -->
+    <h2>System Architecture Flow</h2>
+    <div class="diagram-container">
+      <div class="diagram-title">Target Telemetry Pipeline (Single Root UUID Envelope)</div>
+      
+      <div class="flow-box">
+        <span class="node">Mobile App Launch</span>
+        <span class="arrow">&rarr;</span>
+        <span class="node" style="background:#0284c7;">AppSessionProvider (UUIDv4)</span>
+        <span class="arrow">&rarr;</span>
+        <span class="node">Global session_id: "550e8400-e29b-..."</span>
+      </div>
+
+      <div class="flow-box">
+        <span class="node">1. Eye Tracking Recorder</span>
+        <span class="arrow">&rarr;</span>
+        <span class="node" style="background:#059669;">eye_tracking_sessions table (session_id)</span>
+      </div>
+
+      <div class="flow-box">
+        <span class="node">2. Touch / Keystrokes (useActionTracker)</span>
+        <span class="arrow">&rarr;</span>
+        <span class="node" style="background:#059669;">user_actions / touch_cognitive_scores (session_id)</span>
+      </div>
+
+      <div class="flow-box">
+        <span class="node">3. Lexi Chat (WebSocket Gateway)</span>
+        <span class="arrow">&rarr;</span>
+        <span class="node" style="background:#059669;">conversations / messages table (conversation_id)</span>
+      </div>
+    </div>
+
+    <!-- Implementation Checklist -->
+    <h2>Implementation Action Plan</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Component</th>
+          <th>Owner</th>
+          <th>Action Item</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Mobile Root Context</strong></td>
+          <td>Frontend (Himanee)</td>
+          <td>Create <code>AppSessionProvider.tsx</code> in <code>_layout.tsx</code> to generate <code>uuidv4()</code> on app launch.</td>
+          <td><span class="badge badge-danger">Pending</span></td>
+        </tr>
+        <tr>
+          <td><strong>Touch Hook (useActionTracker)</strong></td>
+          <td>Frontend (Himanee)</td>
+          <td>Replace <code>session-${Date.now()}</code> with the shared root session UUID.</td>
+          <td><span class="badge badge-danger">Pending</span></td>
+        </tr>
+        <tr>
+          <td><strong>Lexi Socket Gateway</strong></td>
+          <td>Backend (Abhishek)</td>
+          <td>Receive root <code>session_id</code> on connect; map to conversation context.</td>
+          <td><span class="badge badge-success">Ready</span></td>
+        </tr>
+        <tr>
+          <td><strong>Database Schemas</strong></td>
+          <td>Database (Abhishek)</td>
+          <td><code>user_actions</code> & <code>touch_cognitive_scores</code> already accept UUIDs in <code>VARCHAR(255)</code>.</td>
+          <td><span class="badge badge-success">Ready (0 DB Migration Needed)</span></td>
+        </tr>
+        <tr>
+          <td><strong>AI Scorer Joins</strong></td>
+          <td>AI / RMS (Subhash)</td>
+          <td>Query all 3 modalities simultaneously with <code>WHERE session_id = '...'</code>.</td>
+          <td><span class="badge badge-primary">Unblocked</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Verified Industry Links -->
+    <h2>Industry Standard References & Standards</h2>
+    <div class="links-box">
+      <div class="link-item">
+        <a href="https://segment.com/docs/connections/spec/common/#context" target="_blank">&#128279; Segment (Twilio) Common Analytics Spec - Sessions</a>
+        <div class="link-desc">Industry specification for session tracking, showing how mobile and web telemetry propagate a unified <code>sessionId</code> across all interaction events.</div>
+      </div>
+      
+      <div class="link-item">
+        <a href="https://posthog.com/docs/product-analytics/sessions" target="_blank">&#128279; PostHog - Session Tracking & ID Lifecycle</a>
+        <div class="link-desc">Standard production guidelines for session rotation, inactivity timeouts (30 minutes), and cross-component correlation.</div>
+      </div>
+
+      <div class="link-item">
+        <a href="https://www.w3.org/TR/trace-context/" target="_blank">&#128279; W3C Trace Context Specification</a>
+        <div class="link-desc">International standard for distributed telemetry correlation, defining how parent context envelopes group disparate subsystem signals.</div>
+      </div>
+
+      <div class="link-item">
+        <a href="https://www.rfc-editor.org/rfc/rfc9562.html" target="_blank">&#128279; IETF RFC 9562: UUID Standard (UUIDv4 & UUIDv7)</a>
+        <div class="link-desc">The official internet engineering standard defining Universally Unique Identifiers for distributed systems and database indexing.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>
